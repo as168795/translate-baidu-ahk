@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百度翻译 (Vue 3)</title>
+    <script src="./lib/vue.global.prod.js"></script>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: /*Arial, sans-serif*/ monospace; margin: 0 auto; padding: 10px 20px 0; background-color: #F0F0F0;}
+        body.dark {background-color: #1a1a1a; color: #e0e0e0;}
+        body.dark textarea,
+        body.dark select,
+        body.dark input,
+        body.dark button {background-color: #2d2d2d; color: #e0e0e0; border-color: #444;}
+        body.dark #historyList {background-color: #2d2d2d; border-color: #444;}
+        body.dark :is(.history-box, .account-content) {background-color: #1a1a1a; color: #e0e0e0;}
+        body.dark .history-item>div:nth-child(3) {color: #aaa;}
+        body.dark .panel {color: #e0e0e0;}
+        #app {width: 100%; max-width: 400px; position: relative; /*-webkit-app-region: drag; 拖拽窗体属性*/}
+        .title-box {height: 30px; text-align: center; line-height: 30px; position: relative; margin-bottom: 5px;}
+		.btn-box {width: 100%; text-align: center; display: flex; justify-content: space-between;}
+		.btn-box>.apiBtn {width: 20%;}
+		.btn-box>.tlBtn {width: 55%; }
+        .btn-box>.historyBtn {width: 20%; }
+        .panel {width: 100%; display: none;}
+        .panel.active {display: block;}
+        .lang-selectors {display: flex; gap: 10px; /*margin-bottom: 10px;*/}
+        select, input, textarea, button {margin: 5px 0; padding: 5px; width: 100%; box-sizing: border-box;}
+        button { padding: 0; height: 30px; background-color: #e0e0e0; border: 1px solid #444;}
+		button:active {border-width: 2px;}
+		.history-box {display: flex; justify-content: space-between; align-items: center; height: 35px; line-height: 30px; text-align: center; padding-bottom: 5px; position: sticky; top: 0; background-color: #f0f0f0;}
+		.history-box>button {width: 50px; margin: 0}
+        .lang-selectors select { width: 50%;}
+        textarea {height: 100px; resize: none;}
+		textarea.result-ouput {height: 240px}
+        #historyList {overflow-y: auto; border: 1px solid #ccc; padding: 10px; max-height: 445px;}
+        .history-item {margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; border-bottom: 1px dashed #999;}
+		.history-item>div>span {font-weight: bold; font-size: 13px;}
+		.history-item>div:nth-child(3) {color: #666; font-style: italic;}
+		/* 设置 */
+		.setting-box {display: flex; justify-content: space-between;}
+		.setting-box>.item-box {display: flex; justify-content: space-between; flex-direction: row; align-items: center;}
+		.setting-box>.item-box>button {width: 80px; margin: unset; padding: unset;}
+		.setting-box>.item-box>select {height: 30px; margin: unset; padding: unset;}
+		.help-content {padding: 0 10px 10px; z-index: 1001; background-color: #f0f0f0; width: 370px; max-height: 95vh; overflow-y: auto; display: flex; flex-direction: column; }
+		.help-content > div:not(:last-child) { margin-bottom: 10px; }
+		/* .help-content div:first-child { font-weight: bold; text-align: center; font-size: 16px; } */
+		.help-content>div:first-child>div {justify-content: space-between; }
+		.help-content>div>div {display: flex; align-items: center; position: sticky; top: 0; background-color: #f0f0f0; height: 40px;}
+		.help-content>div>div>span {font-size: 16px; font-weight: bold;}
+		.help-content dl { margin: 5px 0; }
+		.help-content dt { font-weight: bold; color: #2c3e50; margin-top: 8px; }
+		.help-content dd { margin-left: 15px; color: #666; font-size: 14px; line-height: 1.5; }
+		.help-content button {  margin: unset; padding: unset; width: 50px; }
+		body.dark .help-content { background-color: #2d2d2d; color: #e0e0e0; }
+		body.dark .help-content>div>div {background-color: #2d2d2d;}
+		body.dark .help-content dt { color: #f0f0f0; }
+		body.dark .help-content dd { color: #aaa; }
+		body.dark .help-content button {background-color: #444; color: #e0e0e0;}
+		body.dark .help-content a {color: rgb(71, 146, 231);}
+		/* .setting-box>.item-box>label {min-width: 40px;} */
+		/* api设置 */
+		.modal-box {display: flex; align-items: center;	justify-content: center; z-index: 1000; transform: translateZ(100px); /*这里是给safari用的*/ width: 100vw; height: 100vh; position: fixed; top: 0; left: 0;}
+		.modal-box>.bg-account {position: absolute; top: 0; left: 0; width: 100%; height: 100vh; background-color: #000000ab;}
+		.modal-box>.account-content {padding: 20px 10px 0; z-index: 1001; background-color: #f0f0f0; width: 300px; height: 150px; display: flex; gap: 10px; flex-direction: column;}
+		.modal-box>.account-content>.item-box {display: flex; align-items: center; justify-content: space-between; width: 100%; height: 30px; margin: 0 10px; margin: unset; padding: unset; height: 30px; border: none;}
+		.modal-box>.account-content>.item-box>label {}
+		.modal-box>.account-content>.item-box>input {text-indent: 5px; width: 75%; border: 1px solid #666; margin: unset; padding: unset; height: 30px;}
+		.modal-box>.account-content>.sub-box {display: flex; width: 100%; height: 30px; justify-content: space-between;}
+		.modal-box>.account-content>.sub-box>button {width: 30%; height: 100%;}
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 翻译面板 -->
+        <div class="panel" :class="{ active: currentPanel === 'translate' }">
+            <!-- <h2 class="title-box">百度翻译</h2> -->
+            <div class="lang-selectors">
+                <select v-model="fromLang">
+                    <option v-for="lang in languages" :key="lang.value" :value="lang.value">
+                        {{ lang.label }}{{lang.value == 'auto' ?  ' (来源)' : ""}}
+                    </option>
+                </select>
+                <select v-model="toLang">
+                    <option v-for="lang in languages" :key="lang.value" :value="lang.value">
+                        {{ lang.label }}{{lang.value == 'auto' ? ' (目标)' : ""}}
+                    </option>
+                </select>
+            </div>
+            <textarea id="text-input" v-model="inputText" placeholder="请输入要翻译的文本"></textarea>
+            <div class="btn-box">
+				<button  class="apiBtn" @click="showModal = 'account'">设置密钥</button>
+				<button id="tlBtn" class="tlBtn" @click="translateText">{{ "翻译" + (tranStatus ? "中···" : "")}}</button>
+				<button class="historyBtn" @click="togglePanel">历史</button>
+			</div>
+            <textarea class="result-ouput" v-model="result" placeholder="翻译结果将显示在这里" readonly></textarea>
+			<!-- 主题选择器 -->
+			<div class="setting-box">
+				<div class="item-box">
+					<label></label>
+					<button @click="showModal = 'help'">帮助</button>
+				</div>
+				<div class="item-box" v-for="(item, k) in config_data" :key="k">
+					<label :for="k"></label>
+					<select v-model="config[k]">
+						<option :value="kk" v-for="(vv, kk) in item">{{vv}}</option>
+					</select>
+				</div>
+			</div>
+        </div>
+        <!-- 历史面板 -->
+        <div class="panel" :class="{ active: currentPanel === 'history' }">
+            <h3 class="history-box">
+				<button @click="togglePanel">返回</button>
+				历史翻译记录(最近50条)
+				<button @click="clearHistory">清空</button>
+			</h3>
+            <div id="historyList">
+                <div v-if="historyArr.length === 0">暂无历史记录</div>
+                <div v-else v-for="(item, index) in historyArr" :key="index" class="history-item">
+                    <div><span>原文 ({{ item.from }}):</span> {{ item.text }}</div>
+                    <div><span>译文 ({{ item.to }}):</span> {{ item.content }}</div>
+					<div>{{ item.datetime }}</div>
+                </div>
+            </div>
+        </div>
+		<!-- 模态框 -->
+		<div class="modal-box" v-if="showModal">
+			<div class="bg-account"></div>
+			<div class="account-content" v-if="showModal == 'account'">
+				<div class="item-box">
+					<label for="apiID">APP ID</label>
+					<input type="text" placeholder="请输入百度翻译appID" v-model="account.apiID"></input>
+				</div>
+				<div class="item-box">
+					<label for="apiKey">APP KEY</label>
+					<input type="text" placeholder="请输入百度翻译appKey" v-model="account.apiKey"></input>
+				</div>
+				<div class="sub-box">
+					<button @click="apiHelper">申请密钥</button>
+					<button @click="showModal = !showModal">取消</button>
+					<button @click="setAccount">保存</button>
+				</div>
+			</div>
+			<div class="help-content" v-else-if="showModal == 'help'">
+				<div>
+					<div><span>快捷键说明</span><button @click="showModal = ''">关闭</button></div>
+					<dl>
+						<dt>Win + Alt + Q</dt>
+						<dd>(全局)启动翻译器，自动将当前选中的高亮文本填入翻译输入框。</dd>
+						<dt>Ctrl + Tab</dt>
+						<dd>切换焦点至翻译输入框。</dd>
+						<dt>Ctrl + `</dt>
+						<dd>切换翻译页面和历史记录。</dd>
+						<dt>Ctrl + 空格</dt>
+						<dd>触发翻译（等同于点击“翻译”按钮）。</dd>
+						<dt>Ctrl + O</dt>
+						<dd>窗口半透明切换。</dd>
+						<dt>Ctrl + T</dt>
+						<dd>窗口置顶切换。</dd>
+					</dl>
+				</div>
+				<div>
+					<div><span>配置说明</span></div>
+					<dl>
+						<dt>API密钥设置</dt>
+						<dd>需前往<a href="javascript:void(0)" @click="apiHelper">官网</a>申请并认证(每月赠送百万字符)</dd>
+						<dt>自动翻译</dt>
+						<dd>Win + Alt + Q 时，如果有选中文本直接触发翻译</dd>
+						<dt>语言记忆</dt>
+						<dd>下次启动恢复上次使用的来源或目标语言。</dd>
+					</dl>
+				</div>
+			</div>
+		</div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+		objTranslateBaidu = {
+            setup() {
+                // 响应式数据
+                const tranStatus = ref(false);
+                const currentPanel = ref('translate');
+                const fromLang = ref('auto');
+                const toLang = ref('auto');
+                const inputText = ref('');
+                const result = ref('');
+                const history = ref({});
+				const showModal = ref(false);
+                const config = ref({theme: 'system', translate_mode: 'manual', from_to: 'auto', last_from: 'auto', last_to: 'auto', opacity: 255, topwin: 0}); // 新增主题状态
+				const account = ref({apiID: '', apiKey: ''});
+				// 配置项
+				const config_data = {theme: {system: '跟随系统', light: '日间模式', dark: '夜间模式'}, translate_mode: {manual: '手动翻译', auto: '自动翻译'}, from_to: {auto: '自动检测', from: '记住来源', to: '记住目标', all: '全部记住'}};
+                // 计算属性
+                const historyArr = computed(() => {
+                    if (Object.keys(history.value).length === 0) return [];
+                    const data = Object.values(history.value); //.reverse();
+                    return data.sort((a, b) => {
+                        const a_sort = a.datetime;
+                        const b_sort = b.datetime;
+                        return -a_sort.localeCompare(b_sort); // 倒叙：前面加负数
+                    });
+                });
+				const isApiSet = computed(() => {
+					return account.value.apiID && account.value.apiKey;
+				});
+
+				// 标志变量，标记是否已经完成初始赋值
+				let isInitialized = false;
+				let lastTheme = config.value.theme;
+                // 监听主题变化
+                watch(() => config.value, (nval, oval) => {
+					if (nval.theme != lastTheme) {
+						lastTheme = nval.theme;
+						applyTheme(nval.theme);
+					}
+					if (!isInitialized) {
+						// console.log('waitting', nval); // test
+						return;
+					}
+					sendMsg({type: 4, config: nval}); // 发送消息给后台同步配置修改
+                }, {deep: true});
+				// 监听语言变化
+				watch(() => fromLang.value + toLang.value, (nval) => {
+					if (config.value.from_to == 'auto' || !isInitialized) return;
+					// 记住来源和目标
+					if (['from', 'all'].includes(config.value.from_to)) config.value.last_from = fromLang.value;
+					if (['to', 'all'].includes(config.value.from_to)) config.value.last_to = toLang.value;
+				})
+
+                // 应用主题函数
+                function applyTheme(theme) {
+                    if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.body.classList.add('dark');
+                    } else {
+                        document.body.classList.remove('dark');
+                    }
+                }
+
+                // 初始化主题
+                onMounted(() => {
+                    applyTheme(config.value.theme);
+                    const data = {type: 1};
+                    sendMsg(data);
+                    // 监听系统主题变化
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                        if (config.value.theme === 'system') applyTheme('system');
+                    });
+                });
+
+                // 切换面板
+                function togglePanel() {
+					showModal.value = ''
+                    currentPanel.value = currentPanel.value === 'translate' ? 'history' : 'translate';
+                }
+				// 设置api密钥
+				function setAccount() {
+					if (!account.value.apiID || !account.value.apiKey) return sendMsg({type: -1, msg: 'API_ID和API_KEY都不能为空'});
+					sendMsg({type: 4, account: account.value});
+					showModal.value = false;
+				}
+
+                // 翻译函数
+                function translateText(auto = false) {
+                    if (tranStatus.value) return;
+					if (!isApiSet.value) return sendMsg({type: -1, msg: '请设置密钥后再使用'});
+					inputText.value = inputText.value.trim();
+                    if (!inputText.value) {
+						if (auto) return;
+						return sendMsg({type: -1, msg: '请输入要翻译的文本'});
+					}
+					// const regex = /^[!-~0-9\uFF01-\uFF5E\u3000-\u303F\u309B-\u309C\u30FC\s]*$/;
+					const regex = /^[\d\s\p{P}\p{S}]+$/u;
+					if (regex.test(inputText.value)) {
+						inputText.value = '';
+						if (auto) return;
+						return sendMsg({type: -1, msg: '纯符号不作翻译处理'});
+					}
+                    tranStatus.value = 1;
+                    const data = {type: 2, text: inputText.value, from: fromLang.value, to: toLang.value};
+                    setTimeout(() => {
+                        tranStatus.value = 0;
+                    }, 3000);
+                    sendMsg(data);
+                }
+
+                // 消息发送器 
+                function sendMsg(data) {
+                    if (!data || !data?.type) return;
+                    ahk.SendMsg(JSON.stringify(data));
+                }
+
+                // 保存历史记录
+                function saveHistory(item) {
+					if (item.text == item.content) return;
+                    const tkey = `${item.text}_${item.to}`; // text "_" from "_" to
+                    history.value[tkey] = item;
+					// console.log(  history.value)
+                    if (history.value.length > 50) history.value.pop();
+                }
+				// 清空历史记录
+				function clearHistory() {
+					sendMsg({type: 5});
+					history.value = [];
+				}
+
+				// 接收AHK消息
+                window.chrome.webview.addEventListener('message', Msg => {
+                    // console.log('msg raw', Msg);
+                    const data = JSON.parse(Msg.data);
+                    if (data.type == 1) {
+                        inputText.value = data.data.trim();
+                        if (result.value) result.value = "";
+                        currentPanel.value = 'translate'; // 切换到翻译面板
+                        setTimeout(() => document.getElementById('text-input').focus(), 200); // 聚焦到输入框
+						if (inputText.value && config.value.translate_mode == 'auto') translateText()
+                    } else if (data.type == 2) {
+                        tranStatus.value = 0;
+                        if (data.code > 0) return;
+                        result.value = data.data.content;
+                        saveHistory(data.data);
+                    } else if (data.type == 3) {
+                        history.value = data.data.history;
+                        if (Object.keys(data.data.config).length > 0) config.value = Object.assign(config.value, data.data.config);
+                        if (Object.keys(data.data.account).length > 0) account.value = Object.assign(account.value, data.data.account);
+						// 初始化语言选项
+						if (['from', 'all'].includes(config.value.from_to)) fromLang.value = config.value.last_from;
+						if (['to', 'all'].includes(config.value.from_to)) toLang.value = config.value.last_to;
+						setTimeout(() => (isInitialized = true), 200);
+                    } else if (data.type == 10) {
+                        translateText()
+                    } else if (data.type == 13) {
+                        currentPanel.value = 'translate'; // 切换到翻译面板
+                        setTimeout(() => document.getElementById('text-input').click(), 200); // 聚焦到输入框
+                    } else if (data.type == 20) {
+                        togglePanel()
+                    } else if (data.type == -1) {
+                        tranStatus.value = 0;
+                        // 错误弹窗 没有该[type = -1]返回
+                    }
+                });
+
+				function apiHelper() {
+					window.open('https://fanyi-api.baidu.com/doc/21');
+				}
+                // 语言列表数组
+                const languages = ref([
+                    { value: "auto", label: "自动检测" },
+                    { value: "zh", label: "中文" },
+                    { value: "en", label: "英语" },
+                    { value: "jp", label: "日语" },
+                    { value: "wyw", label: "文言文" },
+                    { value: "kor", label: "韩语" },
+                    { value: "fra", label: "法语" },
+                    { value: "spa", label: "西班牙语" },
+                    { value: "th", label: "泰语" },
+                    { value: "ara", label: "阿拉伯语" },
+                    { value: "ru", label: "俄语" },
+                    { value: "pt", label: "葡萄牙语" },
+                    { value: "de", label: "德语" },
+                    { value: "it", label: "意大利语" },
+                    { value: "el", label: "希腊语" },
+                    { value: "nl", label: "荷兰语" },
+                    { value: "pl", label: "波兰语" },
+                    { value: "bul", label: "保加利亚语" },
+                    { value: "est", label: "爱沙尼亚语" },
+                    { value: "dan", label: "丹麦语" },
+                    { value: "fin", label: "芬兰语" },
+                    { value: "cs", label: "捷克语" },
+                    { value: "rom", label: "罗马尼亚语" },
+                    { value: "slo", label: "斯洛文尼亚语" },
+                    { value: "swe", label: "瑞典语" },
+                    { value: "hu", label: "匈牙利语" },
+                    { value: "cht", label: "繁体中文" },
+                    { value: "vie", label: "越南语" },
+                    { value: "yue", label: "粤语" }
+                ]);
+
+                return {
+					showModal,
+					account,
+					config,
+					config_data,
+                    tranStatus,
+                    currentPanel,
+                    fromLang,
+                    toLang,
+                    inputText,
+                    result,
+                    history,
+                    historyArr,
+                    languages,
+                    togglePanel,
+                    translateText,
+					setAccount,
+					apiHelper,
+					clearHistory
+                };
+            }
+        };
+        const app = createApp(objTranslateBaidu);
+        const vm = app.mount('#app');
+    </script>
+</body>
+</html>
