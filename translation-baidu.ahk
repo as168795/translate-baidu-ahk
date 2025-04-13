@@ -71,6 +71,7 @@ class TranslatorBaidu {
 	static apiUrl := "https://fanyi-api.baidu.com/api/trans/vip/translate" ;
 	static IsOpen := False
 
+	static historyCacheNum := 50
 	static historyData := Map()
 	static config := Map()
 	static account := Map('apiID', '', 'apiKey', '')
@@ -296,10 +297,10 @@ class TranslatorBaidu {
 			return [errorCode, '[' jsonMap['error_msg'] '] ' this.errorMap[errorCode]]
 		}
 		; HelperTool.print(jsonMap) ; Debug
-		content := "" ; jsonMap["trans_result"][1]['dst']
-		for val, key in jsonMap['trans_result'] {
-			; HelperTool.print(val) ; type[int] Debug
-			content .= jsonMap['trans_result'][val]['dst'] "`n"
+		content := "" ;
+		Loop jsonMap['trans_result'].Length {
+			val := jsonMap['trans_result'][A_Index]
+			content .= val['dst'] "`n"
 		}
 		item := Map("text", text, "from", jsonMap['from'], "to", jsonMap['to'], "content", content, "datetime", HelperTool.GetFormatTime())
 		if (content != text) this.DataManage('history', [tkey, item])	; 保存历史记录到文件
@@ -329,12 +330,8 @@ class TranslatorBaidu {
 				this.historyData := Map()
 			} else {
 				this.historyData[item[1]] := item[2]
-				if this.historyData.Count > 50 {
-					for val, key in this.historyData {
-						this.historyData.Delete key
-						break
-					}
-				}
+				if this.historyData.Count > this.historyCacheNum
+					this.historyData := HelperTool.SortAndDelete(this.historyData, 'datetime', this.historyCacheNum)
 			}
 			data := Map("history", this.historyData, "config", this.config, "account", this.account)
 			HelperTool.WriteFile(this.translatebaiduFile, JSON.stringify(data))

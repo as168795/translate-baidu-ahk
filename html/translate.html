@@ -298,7 +298,14 @@
                     const tkey = `${item.text}_${item.to}`; // text "_" from "_" to
                     history.value[tkey] = item;
 					// console.log(  history.value)
-                    if (history.value.length > 50) history.value.pop();
+					if (historyArr.value.length > 50) {
+						let dkey;
+						while (historyArr.value.length > 50) {
+							const item = historyArr.value[historyArr.value.length - 1];
+							dkey = item.text + '_' + item.to;
+							delete history.value[dkey];
+						}
+					}
                 }
 				// 清空历史记录
 				function clearHistory() {

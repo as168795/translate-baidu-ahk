@@ -60,7 +60,7 @@ class HelperTool {
 		A_Clipboard := ClipSaved ; 还原剪贴板. 注意这里使用 A_Clipboard(而不是 ClipboardAll).
 		ClipSaved := "" ; 在剪贴板含有大量内容时释放内存.
 
-		CBS:
+CBS:
 		return Default
 	}
 
@@ -245,6 +245,69 @@ class HelperTool {
 		return DateDiff(now, base, "Seconds")  ; 计算秒差
 	}
 
+	; 按 datetime 排序并删除前 N 个元素
+	static SortAndDelete(map, sortField, saveCount) {
+		; 参数校验
+		if Type(sortField) != 'String' || Type(saveCount) != 'Integer' || Type(map) != 'Map' {
+			throw ValueError("参数类型错误：`nmap: Map, sortField: String, saveCount: Integer", -1)
+		}
+
+		; 1. 提取键值对并校验字段存在性
+		entries := []
+		for key, subMap in map {
+			if !subMap.Has(sortField) {
+				throw ValueError("字段 '" sortField "' 在键 '" key "' 中不存在", -1)
+			}
+			entries.Push({ mkey: key, sortValue: subMap[sortField] })
+		}
+
+		; 2. 自然排序（支持数字和字符串混合）
+		entries.Sort((a, b) => this.NaturalCompare(a.sortValue, b.sortValue))
+
+		; 3. 删除最早的条目
+		deleteCount := entries.Length - saveCount
+		if (deleteCount > 0) {
+			Loop deleteCount {
+				map.Delete(entries[A_Index].mkey)
+			}
+		}
+		return map
+	}
+
+	; 自然排序比较函数
+	static NaturalCompare(a, b) {
+		; 正则分割数字和非数字部分
+		regex := "(\d+)|(\D+)"
+		aParts := [], bParts := []
+
+		; 分割字符串a
+		while (RegExMatch(a, regex, &match)) {
+			aParts.Push(match[0])
+			a := SubStr(a, match.Pos + match.Len)
+		}
+
+		; 分割字符串b
+		while (RegExMatch(b, regex, &match)) {
+			bParts.Push(match[0])
+			b := SubStr(b, match.Pos + match.Len)
+		}
+
+		; 逐段比较
+		loop min(aParts.Length, bParts.Length) {
+			aPart := aParts[A_Index], bPart := bParts[A_Index]
+
+			; 数字部分按数值比较
+			if (IsInteger(aPart) && IsInteger(bPart)) {
+				if (aPart != bPart)
+					return aPart < bPart ? -1 : 1
+			}
+			; 非数字部分按字符串比较
+			else if (aPart != bPart) {
+				return aPart < bPart ? -1 : 1
+			}
+		}
+		return aParts.Length < bParts.Length ? -1 : 1
+	}
 	; 注册消息监听
 	static OnMessage(_callback) {
 		static callback := _callback
@@ -269,7 +332,7 @@ class HelperTool {
 		Prev_TitleMatchMode := A_TitleMatchMode
 		SetTitleMatchMode 2
 		Prev_DetectHiddenWindows := A_DetectHiddenWindows
-		if (!Prev_DetectHiddenWindows) 
+		if (!Prev_DetectHiddenWindows)
 			DetectHiddenWindows True
 		TimeOutTime := 14000  ; 可选的. 等待 receiver.ahk 响应的毫秒数. 默认是 5000
 		; 必须使用发送 SendMessage 而不是投递 PostMessage.
