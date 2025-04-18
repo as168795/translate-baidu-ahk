@@ -340,7 +340,7 @@
                         translateText()
                     } else if (data.type == 13) {
                         currentPanel.value = 'translate'; // 切换到翻译面板
-                        setTimeout(() => document.getElementById('text-input').click(), 200); // 聚焦到输入框
+                        setTimeout(() => document.getElementById('text-input').focus(), 200); // 聚焦到输入框
                     } else if (data.type == 20) {
                         togglePanel()
                     } else if (data.type == -1) {

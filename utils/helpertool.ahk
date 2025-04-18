@@ -55,12 +55,11 @@ class HelperTool {
 			Default := A_Clipboard
 		if copy {
 			A_Clipboard := Default
-			Goto CBS
+		} else {
+			A_Clipboard := ClipSaved ; 还原剪贴板. 注意这里使用 A_Clipboard(而不是 ClipboardAll).
+			ClipSaved := "" ; 在剪贴板含有大量内容时释放内存.
 		}
-		A_Clipboard := ClipSaved ; 还原剪贴板. 注意这里使用 A_Clipboard(而不是 ClipboardAll).
-		ClipSaved := "" ; 在剪贴板含有大量内容时释放内存.
 
-CBS:
 		return Default
 	}
 
@@ -79,21 +78,44 @@ CBS:
 		return md5
 	}
 
-	static dpiauto(BaseWidth, BaseHeight) {
-		; 获取当前 DPI（如果读取失败，默认 96）
-		try {
-			DPI := RegRead("HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics", "AppliedDPI")
-		} catch {
-			DPI := 96
+	; 窗口/控件 焦点获取
+	static PutFocus(Option, Cate := 1) {
+		CateArr := [1, 2] ; 1事件触发 2鼠标模拟
+		if (Type(Option) != "Map" || !Option.Has('x') || !Option.Has('y')) {
+			MsgBox "PutFocus() 参数错误"
+			return
 		}
-
-		; 计算 DPI 缩放因子（相对于默认 96 DPI）
-		DpiScale := DPI / 96
-
-		; 根据当前 DPI 缩放调整宽高
-		GuiWidth := Round(BaseWidth * DpiScale)
-		GuiHeight := Round(BaseHeight * DpiScale)
-		return [GuiWidth, GuiHeight]
+		x := Option['x'], y := Option['y']
+		if (Cate = 1) {
+			if (!Option.Has('Control') || !Option.Has('Hwnd') || !Option.Has('x') || !Option.Has('y')) {
+				MsgBox "PutFocus() 参数错误"
+				return
+			}
+			Control := Option['Control'] ; 获取控件句柄 ; WebView2控件是"Chrome_RenderWidgetHostHWND1"
+			Hwnd :=  Option['Hwnd']
+			hCtrl := ControlGetHwnd(Control, "ahk_id " Hwnd)
+			if (!hCtrl) {
+				MsgBox("未找到 WebView 控件！")
+				return
+			}
+			; 发送 WM_LBUTTONDOWN 和 WM_LBUTTONUP 消息
+			lParam := (y << 16) | x ; 坐标 (100, 100)，相对控件左上角
+			DllCall("SendMessage", "Ptr", hCtrl, "UInt", 0x0201, "Ptr", 0, "Ptr", lParam) ; WM_LBUTTONDOWN 鼠标左键按下
+			DllCall("SendMessage", "Ptr", hCtrl, "UInt", 0x0202, "Ptr", 0, "Ptr", lParam) ; WM_LBUTTONUP 鼠标左键抬起
+			; 发送 WM_SETFOCUS
+			DllCall("SendMessage", "Ptr", hCtrl, "UInt", 0x0007, "Ptr", hCtrl, "Ptr", 0) ; WM_SETFOCUS 仅用于通知窗口获得键盘焦点（例如光标出现在输入框）
+		} else {
+			; 模拟点击激活
+			WinGetPos(&X, &Y, &W, &H, "ahk_id " Hwnd)
+			MouseGetPos(&origX, &origY) ; 保存鼠标位置
+			DllCall("SetCursor", "Ptr", 0) ; 隐藏光标 避免鼠标闪烁
+			; DllCall("SetCursorPos", "Int", X + W//2, "Int", Y + H//2) ; 移动鼠标到窗口中心
+			DllCall("SetCursorPos", "Int", X + x, "Int", Y + y) ; 移动鼠标到窗口
+			DllCall("mouse_event", "UInt", 0x0002, "Int", 0, "Int", 0, "UInt", 0, "Ptr", 0) ; 左键按下
+			DllCall("mouse_event", "UInt", 0x0004, "Int", 0, "Int", 0, "UInt", 0, "Ptr", 0) ; 左键释放
+			DllCall("SetCursorPos", "Int", origX, "Int", origY) ; 恢复鼠标位置
+			DllCall("SystemParametersInfo", "UInt", 0x0057, "UInt", 0, "Ptr", 0, "UInt", 0) ; SPI_SETCURSOR ; 恢复鼠标光标
+		}
 	}
 
 	; 写入字符串（UTF-8 无 BOM）
@@ -308,6 +330,7 @@ CBS:
 		}
 		return aParts.Length < bParts.Length ? -1 : 1
 	}
+
 	; 注册消息监听
 	static OnMessage(_callback) {
 		static callback := _callback

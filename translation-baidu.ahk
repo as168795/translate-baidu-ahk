@@ -47,7 +47,7 @@ TrayClickHandler(wParam, lParam, msg, hwnd) {
 ; #HotIf
 #HotIf WinActive("ahk_group trbdahk")
 ^Space:: TranslatorBaidu.PostMsg(10, 0, "")
-^Tab::TranslatorBaidu.PostMsg(13, 0, "")
+^Tab::TranslatorBaidu.focus
 ^`:: TranslatorBaidu.PostMsg(20, 0, "")
 ^o::TranslatorBaidu.opacity
 ^t::TranslatorBaidu.topwin
@@ -187,6 +187,12 @@ class TranslatorBaidu {
 
 		; 激活窗口
 		WinActivate(this.MyWindow.Hwnd)
+	}
+
+	; 翻译框焦点获取
+	static focus() {
+		HelperTool.PutFocus(Map("x", 10, "y", 100, "Control", "Chrome_RenderWidgetHostHWND1", "Hwnd", this.MyWindow.Hwnd), 1)
+		this.PostMsg(13, 0, "")
 	}
 
 	; 窗口置顶显示
