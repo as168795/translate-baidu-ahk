@@ -162,7 +162,7 @@ class TranslatorBaidu {
 		this.IsOpen := True
 		this.MyWindow := WebViewToo(, , , False) ;You can omit the final parameter or switch 'True' to 'False' to use a Native Window's Titlebar
 		; this.MyWindow.EnableGlobal() ;
-		this.MyWindow.OnEvent("Close", (*) => (this.IsOpen := False))
+		this.MyWindow.OnEvent("Close", (*) => (this.IsOpen := False, this.MyWindow := ''))
 		this.MyWindow.OnEvent("Escape", (*) => WinMinimize(this.MyWindow.Hwnd))
 		this.MyWindow.Load2(this.myFile)
 		; this.MyWindow.AddCallBackToScript("SendMsg", (Webview, Msg) => this.SendMsg(Webview, Msg, this))
