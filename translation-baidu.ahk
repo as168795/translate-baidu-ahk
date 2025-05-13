@@ -73,7 +73,7 @@ class TranslatorBaidu {
 
 	static historyCacheNum := 50
 	static historyData := Map()
-	static config := Map()
+	static config := Map('opacity', 255, 'topwin', 0)
 	static account := Map('apiID', '', 'apiKey', '')
 	static text := ""
 
@@ -83,7 +83,7 @@ class TranslatorBaidu {
 		if dataSave.Has('history')
 			this.historyData := dataSave['history']
 		if dataSave.Has('config')
-			this.config := dataSave['config']
+			this.config := this.config.Extend(dataSave['config'])
 		if dataSave.Has('account')
 			this.account := dataSave['account']
 	}
@@ -129,8 +129,10 @@ class TranslatorBaidu {
 
 		; 加载图标文件并创建 IStream
         iconStream := SteamTool.CreateIconStream(this.iconFile)  ; 替换为你的图标文件路径
-		customItem := this.MyWindow.CreateContextMenuItem("切换置顶", iconStream, 0)  ; iconStream = 0(无图标) kind = 0 表示 COMMAND
-		customItem2 := this.MyWindow.CreateContextMenuItem("切换半透", iconStream, 0)  ; iconStream = 0(无图标) kind = 0 表示 COMMAND
+		topwinStatusName := this.config.Get('topwin', False) ? '取消' : '开启'
+		customItem := this.MyWindow.CreateContextMenuItem(topwinStatusName "置顶", iconStream, 0)  ; iconStream = 0(无图标) kind = 0 表示 COMMAND
+		opacityStatusName := this.config.Get('opacity', 255) != 255 ? '取消' : '开启'
+		customItem2 := this.MyWindow.CreateContextMenuItem(opacityStatusName "半透", iconStream, 0)  ; iconStream = 0(无图标) kind = 0 表示 COMMAND
         ; 插入自定义菜单项到菜单末尾
         customCommandId := customItem.CommandId
         customCommandId2 := customItem2.CommandId
@@ -197,8 +199,8 @@ class TranslatorBaidu {
 
 	; 窗口置顶显示
 	static topwin() {
-		static val := true
-		status := val ? 1 : 0
+		static val := False
+		status := val ? 0 : 1
 		WinSetAlwaysOnTop(status, this.MyWindow.Hwnd)
 		val := !val
 		this.config['topwin'] := status
@@ -327,8 +329,8 @@ class TranslatorBaidu {
 			if (tkey = "config") {
 				; HelperTool.print item
 				if (item = '')
-					item := this.config
-				this.config := item
+					item := Map()
+				this.config := this.config.Extend(item)
 			} else if (tkey = "account") {
 				this.account := item
 				MsgBox("保存成功", "消息提示")
