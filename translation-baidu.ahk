@@ -199,10 +199,8 @@ class TranslatorBaidu {
 
 	; 窗口置顶显示
 	static topwin() {
-		static val := False
-		status := val ? 0 : 1
+		status := this.config.Get('topwin', False) ? 0 : 1
 		WinSetAlwaysOnTop(status, this.MyWindow.Hwnd)
-		val := !val
 		this.config['topwin'] := status
 		this.DataManage('config') ; 保存配置
 	}
