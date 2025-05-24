@@ -147,6 +147,7 @@ class TranslatorBaidu {
 	; 启动翻译窗口
 	static run(text) {
 		if !text {
+			this.text := ""
 			if !this.IsOpen {
 				Goto WVGUI
 			} else {
