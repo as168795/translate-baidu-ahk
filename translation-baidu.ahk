@@ -65,9 +65,9 @@ MsgCallBack(data, hwnd) {
 class TranslatorBaidu {
 	; 百度翻译api doc: https://fanyi-api.baidu.com/doc/21
 	static MyWindow := ""
-	static myFile := A_LineFile "/../html/translate.html"
-	static translatebaiduFile := A_LineFile "/../runtime/TranslatorBaidu.json"
-	static iconFile := A_LineFile "/../html/bdtran.ico"
+	static myFile := A_ScriptDir "/html/translate.html"
+	static translatebaiduFile := A_ScriptDir "\runtime\TranslatorBaidu.json"
+	static iconFile := A_ScriptDir "\html\bdtran.ico"
 	static apiUrl := "https://fanyi-api.baidu.com/api/trans/vip/translate" ;
 	static IsOpen := False
 
@@ -163,11 +163,15 @@ class TranslatorBaidu {
 		return
 		WVGUI:
 		this.IsOpen := True
+		; Ensure WebView2Loader.dll path resolves in compiled EXE
+		try WebViewToo.DllPath := A_ScriptDir "\lib\WebViewToo\" (A_PtrSize * 8) "bit\WebView2Loader.dll"
 		this.MyWindow := WebViewToo(, , , False) ;You can omit the final parameter or switch 'True' to 'False' to use a Native Window's Titlebar
 		; this.MyWindow.EnableGlobal() ;
 		this.MyWindow.OnEvent("Close", (*) => (this.IsOpen := False, this.MyWindow := ''))
 		this.MyWindow.OnEvent("Escape", (*) => WinMinimize(this.MyWindow.Hwnd))
-		this.MyWindow.Load2(this.myFile)
+		; Use file URI to load local html in compiled exe
+		fileUri := "file:///" StrReplace(this.myFile, "\\", "/")
+		this.MyWindow.Navigate(fileUri)
 		; this.MyWindow.AddCallBackToScript("SendMsg", (Webview, Msg) => this.SendMsg(Webview, Msg, this))
 		this.MyWindow.AddCallBackToScript("SendMsg", (Webview, Msg) => this.SendMsg(Webview, Msg))
 		; this.MyWindow.Debug() ; 调试工具
@@ -341,6 +345,10 @@ class TranslatorBaidu {
 					this.historyData := HelperTool.SortAndDelete(this.historyData, 'datetime', this.historyCacheNum)
 			}
 			data := Map("history", this.historyData, "config", this.config, "account", this.account)
+			; ensure runtime directory exists before writing file
+			SplitPath(this.translatebaiduFile, , &outDir)
+			if !DirExist(outDir)
+				DirCreate(outDir)
 			HelperTool.WriteFile(this.translatebaiduFile, JSON.stringify(data))
 		}
 	}
