@@ -10,6 +10,6 @@
 - 操作系统：Win10+
 - 安装 [AutoHotKey 2.0](https://www.autohotkey.com/)
 - 安装 [Microsoft Edge WebView2](https://www.ibm.com/links?url=https%3A%2F%2Fdeveloper.microsoft.com%2Fen-us%2Fmicrosoft-edge%2Fwebview2%2F%23download-section) 选择 `永久更新引导程序(Evergreen Bootstrapper)` 版本
-- Microsoft Edge WebView2 理论系统自带，如果已安装但运行报错需要前往应用修复或卸载重装Microsoft Edge WebView2
+  - Microsoft Edge WebView2 理论系统自带，如果已安装但运行报错需要前往应用修复或卸载重装Microsoft Edge WebView2
 
 
