@@ -176,7 +176,7 @@ class TranslatorBaidu {
 		; this.MyWindow.AreDefaultContextMenusEnabled := false	; 禁用默认的右键菜单
 		this.MyWindow.ContextMenuRequested((handler, args) => this.ContextMenuRequestedHandler(handler, args))
 
-		wh := [400, 500] ; 窗口大小
+		wh := [400, 600] ; 窗口大小
 		this.MyWindow.Show("w" wh[1] " h" wh[2] " Center", "百度翻译") ; "x" A_ScreenWidth - 860 "xCenter" " y20"
 		; WinSetTransparent(180, this.MyWindow.Hwnd) ; 设置为半透明效果
 		; Opt的+AlwaysOnTop无效，用WinSetAlwaysOnTop代替 除非WebViewToo第四参数为False

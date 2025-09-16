@@ -32,9 +32,9 @@
 		.history-box {display: flex; justify-content: space-between; align-items: center; height: 35px; line-height: 30px; text-align: center; padding-bottom: 5px; position: sticky; top: 0; background-color: #f0f0f0;}
 		.history-box>button {width: 50px; margin: 0}
         .lang-selectors select { width: 50%;}
-        textarea {height: 100px; resize: none;}
-		textarea.result-ouput {height: 240px}
-        #historyList {overflow-y: auto; border: 1px solid #ccc; padding: 10px; max-height: 445px;}
+        textarea {height: 140px; resize: none;}
+		textarea.result-ouput {height: 300px}
+        #historyList {overflow-y: auto; border: 1px solid #ccc; padding: 10px; max-height: 545px;}
         .history-item {margin-bottom: 10px; /*padding: 5px;*/ border-bottom: 1px solid #eee; border-bottom: 1px dashed #999;}
 		.history-item>div>span {font-weight: bold; font-size: 13px;}
 		.history-item>div:nth-child(3) {color: #666; font-style: italic;}
@@ -73,6 +73,7 @@
 </head>
 <body>
     <div id="app">
+		<div v-html="darkStype"></div>
         <!-- 翻译面板 -->
         <div class="panel" :class="{ active: currentPanel === 'translate' }">
             <!-- <h2 class="title-box">百度翻译</h2> -->
@@ -189,6 +190,7 @@
                 const result = ref('');
                 const history = ref({});
 				const showModal = ref(false);
+				const darkStype = ref('');
                 const config = ref({theme: 'system', translate_mode: 'manual', from_to: 'auto', last_from: 'auto', last_to: 'auto', opacity: 255, topwin: 0}); // 新增主题状态
 				const account = ref({apiID: '', apiKey: ''});
 				// 配置项
@@ -234,8 +236,22 @@
                 function applyTheme(theme) {
                     if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         document.body.classList.add('dark');
+						darkStype.value = `<style>
+							::-webkit-scrollbar {
+								/*width: 12px;*/
+								background-color: #1e1e1e; /* 深色轨道 */
+							}
+							::-webkit-scrollbar-thumb {
+								background-color: #555; /* 深色滑块 */
+								/*border-radius: 6px;*/
+							}
+							::-webkit-scrollbar-thumb:hover {
+								background-color: #777; /* 悬停变色 */
+							}
+							</style>`;
                     } else {
                         document.body.classList.remove('dark');
+						darkStype.value = '';
                     }
                 }
 
@@ -298,7 +314,7 @@
                     const tkey = `${item.text}_${item.to}`; // text "_" from "_" to
                     history.value[tkey] = item;
 					// console.log(  history.value)
-					if (historyArr.value.length > 50) {
+                    if (historyArr.value.length > 50) {
 						let dkey;
 						while (historyArr.value.length > 50) {
 							const item = historyArr.value[historyArr.value.length - 1];
@@ -340,6 +356,7 @@
                         translateText()
                     } else if (data.type == 13) {
                         currentPanel.value = 'translate'; // 切换到翻译面板
+                        // setTimeout(() => document.getElementById('text-input').click(), 200); // 聚焦到输入框
                         setTimeout(() => document.getElementById('text-input').focus(), 200); // 聚焦到输入框
                     } else if (data.type == 20) {
                         togglePanel()
@@ -399,6 +416,7 @@
                     history,
                     historyArr,
                     languages,
+					darkStype,
                     togglePanel,
                     translateText,
 					setAccount,
