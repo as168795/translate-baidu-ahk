@@ -34,10 +34,15 @@
         .lang-selectors select { width: 50%;}
         textarea {height: 140px; resize: none;}
 		textarea.result-ouput {height: 300px}
+		.result-box {position: relative; margin: 5px 0;}
+		.result-box>textarea {display: block; margin: 0; padding-right: 60px;}
+		.result-box>.screen-btn {position: absolute; top: 8px; right: 8px; width: 50px; height: 24px; margin: 0; padding: 0; font-size: 12px;}
         #historyList {overflow-y: auto; overflow-x: hidden; border: 1px solid #ccc; padding: 10px; max-height: 545px;}
         .history-item {margin-bottom: 10px; /*padding: 5px;*/ border-bottom: 1px solid #eee; border-bottom: 1px dashed #999;}
 		.history-item>div>span {font-weight: bold; font-size: 13px;}
 		.history-item>div:nth-child(3) {color: #666; font-style: italic;}
+		.history-item>div.trans-box {position: relative; padding-right: 55px; min-height: 24px;}
+		.trans-box>.screen-btn {position: absolute; top: 0; right: 0; width: 50px; height: 24px; margin: 0; padding: 0; font-size: 12px;}
 		/* 设置 */
 		.setting-box {display: flex; justify-content: space-between;}
 		.setting-box>.item-box {display: flex; justify-content: space-between; flex-direction: row; align-items: center;}
@@ -95,7 +100,10 @@
 				<button id="tlBtn" class="tlBtn" @click="translateText">{{ "翻译" + (tranStatus ? "中···" : "")}}</button>
 				<button class="historyBtn" @click="togglePanel">历史</button>
 			</div>
-            <textarea class="result-ouput" v-model="result" placeholder="翻译结果将显示在这里" readonly></textarea>
+            <div class="result-box">
+                <textarea class="result-ouput" v-model="result" placeholder="翻译结果将显示在这里" readonly></textarea>
+                <button v-if="result" class="screen-btn" title="粘贴译文" @click="screenOut(result)">上屏</button>
+            </div>
 			<!-- 主题选择器 -->
 			<div class="setting-box">
 				<div class="item-box">
@@ -121,7 +129,10 @@
                 <div v-if="historyArr.length === 0">暂无历史记录</div>
                 <div v-else v-for="(item, index) in historyArr" :key="index" class="history-item">
                     <div><span>原文 ({{ item.from }}):</span> {{ item.text }}</div>
-                    <div><span>译文 ({{ item.to }}):</span> {{ item.content }}</div>
+                    <div class="trans-box">
+						<button class="screen-btn" title="粘贴译文" @click="screenOut(item.content)">上屏</button>
+                        <span>译文 ({{ item.to }}):</span> {{ item.content }}
+                    </div>
 					<div>{{ item.datetime }}</div>
                 </div>
             </div>
@@ -329,6 +340,12 @@
 					history.value = [];
 				}
 
+				// 上屏：把译文粘贴到上一个激活的窗口
+				function screenOut(text) {
+					if (!text) return;
+					sendMsg({type: 6, text});
+				}
+
 				// 接收AHK消息
                 window.chrome.webview.addEventListener('message', Msg => {
                     // console.log('msg raw', Msg);
@@ -421,7 +438,8 @@
                     translateText,
 					setAccount,
 					apiHelper,
-					clearHistory
+					clearHistory,
+					screenOut
                 };
             }
         };

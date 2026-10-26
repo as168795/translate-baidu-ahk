@@ -76,8 +76,10 @@ class TranslatorBaidu {
 	static config := Map('opacity', 255, 'topwin', 0)
 	static account := Map('apiID', '', 'apiKey', '')
 	static text := ""
+	static lastHwnd := 0 ; 呼出翻译窗口前的活动窗口，用于"上屏"
 
 	static __New() {
+		this.InitConfigFile() ; 配置文件不存在时初始化创建
 		dataSave := this.DataManage()
 		; HelperTool.print dataSave
 		if dataSave.Has('history')
@@ -86,6 +88,21 @@ class TranslatorBaidu {
 			this.config := this.config.Extend(dataSave['config'])
 		if dataSave.Has('account')
 			this.account := dataSave['account']
+	}
+
+	; 配置文件初始化：不存在时创建默认配置文件，失败时提示
+	static InitConfigFile() {
+		if FileExist(this.translatebaiduFile)
+			return
+		try {
+			SplitPath(this.translatebaiduFile, , &outDir)
+			if !DirExist(outDir)
+				DirCreate(outDir)
+			data := Map("history", this.historyData, "config", this.config, "account", this.account)
+			HelperTool.WriteFile(this.translatebaiduFile, JSON.stringify(data))
+		} catch as e {
+			MsgBox("配置文件初始化失败: " e.Message, "消息提示")
+		}
 	}
 
 	static ContextMenuRequestedHandler(handler, args) {
@@ -146,6 +163,7 @@ class TranslatorBaidu {
 
 	; 启动翻译窗口
 	static run(text) {
+		this.TrackLastWindow() ; 启动前记录"上屏"目标窗口
 		if !text {
 			this.text := ""
 			if !this.IsOpen {
@@ -253,11 +271,52 @@ class TranslatorBaidu {
 			this.DataManage('clear_history')
 			MsgBox "清除历史记录成功", '消息提示'
 			return
+		} else if mtype = 6 { ; 上屏：粘贴译文到上一个激活窗口
+			this.ScreenOut(res['text'])
+			return
 		} else if mtype = -1 {	; 错误提示
 			data := ""
 			MsgBox res['msg'], '消息提示'
 		}
 		this.PostMsg(mtype, code, data)
+	}
+
+	; 记录呼出翻译窗口前的活动窗口（供"上屏"使用）
+	static TrackLastWindow() {
+		if WinActive("ahk_group trbdahk")
+			return
+		hwnd := WinExist("A")
+		if hwnd
+			this.lastHwnd := hwnd
+	}
+
+	; 上屏：将译文粘贴到上一个激活的窗口
+	static ScreenOut(text) {
+		text := Trim(text, " `t`r`n") ; 去掉首尾空白（含换行）
+		if !text
+			return
+		hwnd := this.lastHwnd
+		if !hwnd || !WinExist("ahk_id " hwnd) {
+			A_Clipboard := text
+			ToolTip("未找到目标窗口，译文已复制到剪贴板")
+			SetTimer(() => ToolTip(), -1500)
+			return
+		}
+		clipSaved := ClipboardAll()
+		A_Clipboard := text
+		Sleep(50)
+		if (WinGetMinMax("ahk_id " hwnd) = -1)
+			WinRestore("ahk_id " hwnd)
+		WinActivate("ahk_id " hwnd)
+		if !WinWaitActive("ahk_id " hwnd, , 1) {
+			A_Clipboard := clipSaved ; 激活失败，还原剪贴板
+			return
+		}
+		Sleep(100)
+		Send("^v")
+		Sleep(200)
+		A_Clipboard := clipSaved ; 还原剪贴板
+		clipSaved := ""
 	}
 
 	static getSign(text) {
